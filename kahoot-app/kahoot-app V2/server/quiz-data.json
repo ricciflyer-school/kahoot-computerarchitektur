@@ -1,0 +1,144 @@
+{
+  "questions": [
+    {
+      "id": 1,
+      "title": "CPU – Die zentrale Verarbeitungseinheit",
+      "description": "Was ist die Hauptaufgabe der CPU (Central Processing Unit)?",
+      "image": "[BILD_CPU]",
+      "answers": [
+        "Daten dauerhaft speichern",
+        "Befehle ausführen und Berechnungen durchführen",
+        "Daten über das Netzwerk senden",
+        "Bilder auf dem Monitor anzeigen"
+      ],
+      "correctIndex": 1,
+      "timeLimit": 20
+    },
+    {
+      "id": 2,
+      "title": "RAM – Der Arbeitsspeicher",
+      "description": "Welche Eigenschaft trifft auf den Arbeitsspeicher (RAM) zu?",
+      "image": "[BILD_RAM]",
+      "answers": [
+        "Er ist flüchtig – Daten gehen beim Ausschalten verloren",
+        "Er speichert Daten dauerhaft",
+        "Er ist langsamer als eine Festplatte",
+        "Er befindet sich nur auf der Grafikkarte"
+      ],
+      "correctIndex": 0,
+      "timeLimit": 20
+    },
+    {
+      "id": 3,
+      "title": "Cache – Schneller Zwischenspeicher",
+      "description": "Was ist der Zweck eines Caches (Cache-Speicher)?",
+      "image": "[BILD_CACHE]",
+      "answers": [
+        "Dauerhafte Speicherung großer Dateien",
+        "Schnelle Zwischenspeicherung häufig genutzter Daten",
+        "Stromversorgung der CPU",
+        "Kühlung des Prozessors"
+      ],
+      "correctIndex": 1,
+      "timeLimit": 25
+    },
+    {
+      "id": 4,
+      "title": "Mainboard – Die Hauptplatine",
+      "description": "Welche Funktion hat das Mainboard (Hauptplatine) im Computer?",
+      "image": "[BILD_MAINBOARD]",
+      "answers": [
+        "Es verbindet alle Komponenten wie CPU, RAM und GPU miteinander",
+        "Es speichert dauerhaft Dateien",
+        "Es kühlt den Prozessor aktiv",
+        "Es ersetzt die Grafikkarte"
+      ],
+      "correctIndex": 0,
+      "timeLimit": 20
+    },
+    {
+      "id": 5,
+      "title": "GPU – Die Grafikeinheit",
+      "description": "Wofür ist die GPU (Graphics Processing Unit) besonders gut geeignet?",
+      "image": "[BILD_GPU]",
+      "answers": [
+        "Sequentielle Textverarbeitung",
+        "Massiv parallele Berechnungen, z.B. für Grafik und KI",
+        "Speicherung von Betriebssystemdateien",
+        "Verwaltung der Netzwerkverbindung"
+      ],
+      "correctIndex": 1,
+      "timeLimit": 20
+    },
+    {
+      "id": 6,
+      "title": "ARM-Architektur",
+      "description": "Was unterscheidet die ARM-Architektur grundlegend von klassischen x86-CPUs?",
+      "image": "[BILD_ARM]",
+      "answers": [
+        "ARM nutzt RISC, x86 nutzt CISC",
+        "ARM kann keine Befehle ausführen",
+        "ARM ist nur für Grafikkarten gedacht",
+        "ARM benötigt keinen Arbeitsspeicher"
+      ],
+      "correctIndex": 0,
+      "timeLimit": 25
+    },
+    {
+      "id": 7,
+      "title": "x86-Architektur",
+      "description": "Welche Aussage zur x86-Architektur ist korrekt?",
+      "image": "[BILD_CPU]",
+      "answers": [
+        "x86 ist eine CISC-Architektur, verbreitet in PCs und Laptops",
+        "x86 wird ausschließlich in Smartphones verwendet",
+        "x86 ist keine Prozessorarchitektur, sondern ein Speichertyp",
+        "x86 kann nur 8 Bit verarbeiten"
+      ],
+      "correctIndex": 0,
+      "timeLimit": 20
+    },
+    {
+      "id": 8,
+      "title": "Mehrkernprozessoren",
+      "description": "Was ist der Vorteil eines Mehrkernprozessors (Multi-Core-CPU)?",
+      "image": "[BILD_CPU]",
+      "answers": [
+        "Mehrere Aufgaben können gleichzeitig (parallel) verarbeitet werden",
+        "Der Stromverbrauch wird automatisch auf 0 reduziert",
+        "Der Arbeitsspeicher wird dadurch überflüssig",
+        "Es kann nur noch ein Programm gleichzeitig laufen"
+      ],
+      "correctIndex": 0,
+      "timeLimit": 20
+    },
+    {
+      "id": 9,
+      "title": "Taktfrequenz",
+      "description": "Welche Einheit misst die Taktfrequenz einer CPU?",
+      "image": "[BILD_CPU]",
+      "answers": [
+        "Watt (W)",
+        "Gigahertz (GHz)",
+        "Gigabyte (GB)",
+        "Volt (V)"
+      ],
+      "correctIndex": 1,
+      "timeLimit": 15
+    },
+    {
+      "id": 10,
+      "title": "Befehlszyklus",
+      "description": "Aus welchen Grundschritten besteht der klassische Befehlszyklus (Fetch-Decode-Execute)?",
+      "image": "[BILD_MAINBOARD]",
+      "answers": [
+        "Holen, Dekodieren, Ausführen",
+        "Speichern, Löschen, Kopieren",
+        "Starten, Anhalten, Neustarten",
+        "Senden, Empfangen, Bestätigen"
+      ],
+      "correctIndex": 0,
+      "timeLimit": 25
+    }
+  ]
+}

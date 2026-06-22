@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mitspielen – Computerarchitektur-Quiz</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+
+    <div class="topbar">
+      <div class="logo">🙋 Quiz-Teilnahme</div>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="btnSound" title="Sound an/aus">🔈</button>
+        <button class="icon-btn" id="btnDark" title="Dunkelmodus">🌙</button>
+      </div>
+    </div>
+
+    <!-- ===================== SCREEN: BEITRETEN ===================== -->
+    <div id="screen-join" class="center-screen">
+      <div class="card">
+        <h2>Quiz beitreten</h2>
+        <input type="text" id="inputCode" maxlength="6" placeholder="SPIELCODE" style="text-transform:uppercase; text-align:center; font-size:1.4rem; letter-spacing:4px;" />
+        <input type="text" id="inputName" maxlength="18" placeholder="Dein Name" />
+        <p class="error-text" id="joinError"></p>
+        <button id="btnJoin" class="btn btn-success btn-block">✅ Beitreten</button>
+      </div>
+    </div>
+
+    <!-- ===================== SCREEN: LOBBY (WARTEN) ===================== -->
+    <div id="screen-waiting" class="center-screen hidden">
+      <div class="spinner"></div>
+      <h2 style="color:#fff;">Du bist drin, <span id="playerNameDisplay"></span>! 🎉</h2>
+      <p class="text-muted" style="color:#fff;">Warte, bis der Host das Quiz startet…</p>
+    </div>
+
+    <!-- ===================== SCREEN: FRAGE (zunächst nur Text, dann Antworten) ===================== -->
+    <div id="screen-question" class="center-screen hidden" style="justify-content:flex-start;">
+      <div class="question-header" style="width:100%;">
+        <span class="question-counter" id="pQuestionCounter">Frage 1/10</span>
+        <div class="timer-circle" id="pTimerCircle">20</div>
+      </div>
+      <div class="question-box" id="pQuestionBox">
+        <div class="image-placeholder" id="pQuestionImage">[BILD]</div>
+        <div id="pQuestionTitle"></div>
+      </div>
+      <div class="answers-grid" id="playerAnswersGrid">
+        <!-- wird per JS befüllt: 4 Kacheln ▲ ◆ ● ■ -->
+      </div>
+    </div>
+
+    <!-- ===================== SCREEN: ANTWORT ABGESCHICKT (Warten auf Ergebnis) ===================== -->
+    <div id="screen-waitingResult" class="center-screen hidden">
+      <div class="spinner"></div>
+      <h2 style="color:#fff;">Antwort gesendet ✔️</h2>
+      <p class="text-muted" style="color:#fff;">Warte auf die anderen Teilnehmer…</p>
+    </div>
+
+    <!-- ===================== SCREEN: ERGEBNIS DER FRAGE ===================== -->
+    <div id="screen-result" class="center-screen hidden">
+      <div class="card" id="resultCard">
+        <div class="feedback-screen" id="feedbackText"></div>
+        <div class="score-badge" id="scoreBadge"></div>
+      </div>
+    </div>
+
+    <!-- ===================== SCREEN: ZWISCHENRANGLISTE ===================== -->
+    <div id="screen-leaderboard" class="center-screen hidden">
+      <h2 style="color:#fff;">📊 Zwischenstand</h2>
+      <ol class="leaderboard-list" id="pLeaderboardList"></ol>
+      <p class="text-muted" style="color:#fff;">Nächste Frage folgt gleich…</p>
+    </div>
+
+    <!-- ===================== SCREEN: ENDPLATZIERUNG ===================== -->
+    <div id="screen-final" class="center-screen hidden">
+      <h2 style="color:#fff;">🏁 Quiz beendet!</h2>
+      <div class="card" id="finalRankCard"></div>
+      <ol class="leaderboard-list mt-24" id="pFinalLeaderboardList"></ol>
+    </div>
+
+    <!-- ===================== SCREEN: HOST GETRENNT / FEHLER ===================== -->
+    <div id="screen-error" class="center-screen hidden">
+      <div class="card">
+        <h2>⚠️ Verbindung unterbrochen</h2>
+        <p id="errorMessage">Der Host hat die Verbindung verloren.</p>
+        <button class="btn btn-secondary btn-block" onclick="location.reload()">Neu laden</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+  <script>
+    /* ============================================================
+     * Spieler-Logik
+     * Steuert Beitritt, Antwortabgabe und Anzeige aus Spielersicht.
+     * ============================================================ */
+    applyDarkModeFromStorage();
+    const socket = io();
+
+    const screens = {
+      join: document.getElementById("screen-join"),
+      waiting: document.getElementById("screen-waiting"),
+      question: document.getElementById("screen-question"),
+      waitingResult: document.getElementById("screen-waitingResult"),
+      result: document.getElementById("screen-result"),
+      leaderboard: document.getElementById("screen-leaderboard"),
+      final: document.getElementById("screen-final"),
+      error: document.getElementById("screen-error")
+    };
+    function showScreen(name) {
+      Object.values(screens).forEach((el) => el.classList.add("hidden"));
+      screens[name].classList.remove("hidden");
+    }
+
+    // ---------- Sound / Dunkelmodus ----------
+    const btnSound = document.getElementById("btnSound");
+    function refreshSoundIcon() { btnSound.textContent = isSoundEnabled() ? "🔊" : "🔈"; }
+    refreshSoundIcon();
+    btnSound.onclick = () => { setSoundEnabled(!isSoundEnabled()); refreshSoundIcon(); };
+    document.getElementById("btnDark").onclick = toggleDarkMode;
+
+    // ---------- Versuche, automatisch den Code aus der URL zu übernehmen (?code=ABC123) ----------
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("code")) {
+      document.getElementById("inputCode").value = urlParams.get("code").toUpperCase();
+    }
+
+    let myAnswerLocked = false;
+    let currentTimerInterval = null;
+
+    // ---------- Beitreten ----------
+    document.getElementById("btnJoin").onclick = doJoin;
+    document.getElementById("inputName").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") doJoin();
+    });
+
+    function doJoin() {
+      const code = document.getElementById("inputCode").value.trim().toUpperCase();
+      const name = document.getElementById("inputName").value.trim();
+      const errorEl = document.getElementById("joinError");
+      errorEl.textContent = "";
+
+      if (!code || code.length !== 6) {
+        errorEl.textContent = "Bitte gib den 6-stelligen Spielcode ein.";
+        return;
+      }
+      if (!name || name.length < 2) {
+        errorEl.textContent = "Bitte gib einen Namen mit mind. 2 Zeichen ein.";
+        return;
+      }
+
+      socket.emit("player:joinGame", { code, name }, (res) => {
+        if (!res.success) {
+          errorEl.textContent = res.error;
+          return;
+        }
+        document.getElementById("playerNameDisplay").textContent = res.name;
+        showScreen("waiting");
+        playSound("join");
+      });
+    }
+
+    // ---------- Spielstart ----------
+    socket.on("game:starting", () => {
+      // Bleibt im Wartebildschirm, bis die erste Frage eintrifft
+    });
+
+    // ---------- Neue Frage ----------
+    const SHAPES = ["shape-triangle", "shape-diamond", "shape-circle", "shape-square"];
+    const SYMBOLS = ["▲", "◆", "●", "■"];
+
+    socket.on("game:newQuestion", ({ index, total, question }) => {
+      myAnswerLocked = false;
+      clearInterval(currentTimerInterval);
+      showScreen("question");
+      playSound("tick");
+
+      document.getElementById("pQuestionCounter").textContent = `Frage ${index + 1} / ${total}`;
+      renderQuestionImage(document.getElementById("pQuestionImage"), question.image);
+      document.getElementById("pQuestionTitle").innerHTML = `<strong>${escapeHtml(question.title)}</strong><br><span style="font-size:0.9rem;font-weight:400;">${escapeHtml(question.description)}</span>`;
+
+      const grid = document.getElementById("playerAnswersGrid");
+      grid.innerHTML = "";
+      question.answers.forEach((answerText, i) => {
+        const tile = document.createElement("div");
+        tile.className = `answer-tile ${SHAPES[i]}`;
+        tile.innerHTML = `<span class="answer-shape">${SYMBOLS[i]}</span><span>${escapeHtml(answerText)}</span>`;
+        tile.onclick = () => submitAnswer(i);
+        grid.appendChild(tile);
+      });
+
+      let remaining = question.timeLimit;
+      const timerCircle = document.getElementById("pTimerCircle");
+      timerCircle.textContent = remaining;
+      timerCircle.classList.remove("low");
+      currentTimerInterval = setInterval(() => {
+        remaining--;
+        timerCircle.textContent = Math.max(remaining, 0);
+        if (remaining <= 5) timerCircle.classList.add("low");
+        if (remaining <= 0) clearInterval(currentTimerInterval);
+      }, 1000);
+    });
+
+    function submitAnswer(index) {
+      if (myAnswerLocked) return; // Mehrfachantworten im Client zusätzlich verhindern
+      myAnswerLocked = true;
+
+      // Visuelles Feedback: gewählte Kachel hervorheben
+      document.querySelectorAll("#playerAnswersGrid .answer-tile").forEach((tile, i) => {
+        tile.classList.toggle("selected", i === index);
+      });
+
+      socket.emit("player:submitAnswer", { answerIndex: index });
+      setTimeout(() => showScreen("waitingResult"), 400);
+    }
+
+    // ---------- Direktes Ergebnis nach der Antwort ----------
+    socket.on("player:answerResult", ({ correct, pointsEarned, totalScore }) => {
+      showScreen("result");
+      const feedbackEl = document.getElementById("feedbackText");
+      if (correct) {
+        feedbackEl.textContent = "✅ Richtig!";
+        feedbackEl.className = "feedback-screen feedback-correct";
+        playSound("correct");
+      } else {
+        feedbackEl.textContent = "❌ Leider falsch";
+        feedbackEl.className = "feedback-screen feedback-wrong";
+        playSound("wrong");
+      }
+      document.getElementById("scoreBadge").textContent = `+${pointsEarned} Punkte (Gesamt: ${totalScore})`;
+    });
+
+    // Falls die Zeit abläuft, ohne dass geantwortet wurde: Hinweis anzeigen
+    socket.on("game:revealAnswer", () => {
+      if (!myAnswerLocked) {
+        showScreen("result");
+        document.getElementById("feedbackText").textContent = "⏰ Zeit abgelaufen";
+        document.getElementById("feedbackText").className = "feedback-screen feedback-wrong";
+        document.getElementById("scoreBadge").textContent = "+0 Punkte";
+        playSound("wrong");
+      }
+    });
+
+    // ---------- Zwischenrangliste ----------
+    socket.on("game:leaderboard", ({ leaderboard }) => {
+      showScreen("leaderboard");
+      const list = document.getElementById("pLeaderboardList");
+      list.innerHTML = "";
+      leaderboard.slice(0, 10).forEach((p, i) => {
+        const li = document.createElement("li");
+        li.className = "leaderboard-item" + (i === 0 ? " top-1" : "");
+        li.innerHTML = `<span><span class="rank">${i + 1}.</span>${escapeHtml(p.name)}</span><span>${p.score} P.</span>`;
+        list.appendChild(li);
+      });
+    });
+
+    // ---------- Endergebnis ----------
+    socket.on("game:finished", ({ leaderboard }) => {
+      showScreen("final");
+      const myId = socket.id;
+      const myRank = leaderboard.findIndex((p) => p.socketId === myId) + 1;
+      const me = leaderboard.find((p) => p.socketId === myId);
+
+      document.getElementById("finalRankCard").innerHTML = me
+        ? `<h2>Dein Ergebnis</h2><p style="font-size:2rem;font-weight:800;">${formatRank(myRank)} Platz</p><p>${me.score} Punkte gesamt</p>`
+        : `<p>Keine Wertung verfügbar.</p>`;
+
+      const list = document.getElementById("pFinalLeaderboardList");
+      list.innerHTML = "";
+      leaderboard.slice(0, 10).forEach((p, i) => {
+        const li = document.createElement("li");
+        li.className = "leaderboard-item" + (i === 0 ? " top-1" : "");
+        li.innerHTML = `<span><span class="rank">${i + 1}.</span>${escapeHtml(p.name)}</span><span>${p.score} P.</span>`;
+        list.appendChild(li);
+      });
+    });
+
+    // ---------- Host-Verbindung verloren ----------
+    socket.on("game:hostDisconnected", () => {
+      document.getElementById("errorMessage").textContent =
+        "Der Host hat die Verbindung verloren. Bitte warte oder lade die Seite neu.";
+      showScreen("error");
+    });
+
+    // ---------- Eigene Verbindung verloren -> Socket.IO versucht automatisch, sich neu zu verbinden ----------
+    socket.io.on("reconnect_attempt", () => {
+      console.log("Versuche, die Verbindung wiederherzustellen…");
+    });
+    socket.on("connect_error", () => {
+      console.warn("Verbindungsfehler – erneuter Versuch läuft automatisch.");
+    });
+  </script>
+</body>
+</html>
