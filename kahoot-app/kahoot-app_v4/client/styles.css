@@ -1,0 +1,476 @@
+/* ============================================================
+   style.css
+   Zentrales Stylesheet für das Computerarchitektur-Quiz.
+   Enthält: Grundlayout, Farbschema (Kahoot-ähnlich), Responsive
+   Design, Animationen und Dunkelmodus.
+   ============================================================ */
+
+:root {
+  /* Kahoot-ähnliche Farbpalette */
+  --color-bg: #46178f;
+  --color-bg-gradient: linear-gradient(135deg, #46178f 0%, #7b2ff7 100%);
+  --color-card: #ffffff;
+  --color-text: #26262b;
+  --color-text-light: #6b6b76;
+  --color-red: #e21b3c;
+  --color-blue: #1368ce;
+  --color-yellow: #ffa602;
+  --color-green: #26890c;
+  --color-accent: #ffd23f;
+  --radius: 16px;
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+/* Dunkelmodus überschreibt die wichtigsten Variablen */
+body.dark {
+  --color-bg: #14142b;
+  --color-bg-gradient: linear-gradient(135deg, #14142b 0%, #2a1a4d 100%);
+  --color-card: #1f1f38;
+  --color-text: #f1f1f6;
+  --color-text-light: #b5b5c9;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  background: var(--color-bg-gradient);
+  color: var(--color-text);
+  min-height: 100vh;
+  transition: background 0.4s ease, color 0.4s ease;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ---------- Allgemeine Layout-Helfer ---------- */
+.center-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+}
+
+.card {
+  background: var(--color-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 32px;
+  width: 100%;
+  max-width: 480px;
+  animation: popIn 0.35s ease;
+}
+
+.card-wide {
+  max-width: 900px;
+}
+
+@keyframes popIn {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* ---------- Typografie ---------- */
+h1, h2, h3 {
+  margin: 0 0 16px;
+  font-weight: 800;
+}
+
+.title-logo {
+  font-size: 2.4rem;
+  color: #fff;
+  text-shadow: 0 4px 12px rgba(0,0,0,0.35);
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  color: rgba(255,255,255,0.85);
+  margin-bottom: 32px;
+}
+
+p { line-height: 1.5; }
+
+/* ---------- Buttons ---------- */
+button, .btn {
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 1rem;
+  border: none;
+  border-radius: 12px;
+  padding: 14px 22px;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.15);
+}
+
+button:hover { filter: brightness(1.07); }
+button:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.15); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-primary { background: var(--color-blue); color: #fff; }
+.btn-success { background: var(--color-green); color: #fff; }
+.btn-warning { background: var(--color-yellow); color: #20232a; }
+.btn-danger { background: var(--color-red); color: #fff; }
+.btn-secondary { background: #e4e4ee; color: #26262b; }
+.btn-block { width: 100%; margin-top: 12px; }
+.btn-icon { font-size: 1.2rem; margin-right: 6px; }
+
+/* ---------- Formulare ---------- */
+input[type="text"], input[type="number"], select, textarea {
+  width: 100%;
+  padding: 14px;
+  margin: 8px 0 16px;
+  border-radius: 10px;
+  border: 2px solid #ddd;
+  font-size: 1rem;
+  background: var(--color-card);
+  color: var(--color-text);
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--color-blue);
+}
+
+/* ---------- Top-Bar (gemeinsam für Host & Player) ---------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  background: rgba(0,0,0,0.18);
+}
+.topbar .logo {
+  color: #fff;
+  font-weight: 800;
+  font-size: 1.2rem;
+}
+.topbar-actions { display: flex; gap: 10px; align-items: center; }
+.icon-btn {
+  background: rgba(255,255,255,0.18);
+  color: #fff;
+  border-radius: 50%;
+  width: 42px; height: 42px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem;
+  box-shadow: none;
+}
+
+/* ---------- Game Code Anzeige ---------- */
+.game-code-box {
+  background: #fff;
+  color: #26262b;
+  border-radius: var(--radius);
+  padding: 18px 28px;
+  display: inline-block;
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: 6px;
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+}
+
+.qr-wrapper {
+  background: #fff;
+  display: inline-block;
+  padding: 10px;
+  border-radius: 12px;
+  margin: 12px 0;
+}
+
+/* ---------- Spielerliste (Lobby) ---------- */
+.player-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin: 24px 0;
+  max-width: 900px;
+}
+.player-chip {
+  background: var(--color-accent);
+  color: #26262b;
+  padding: 10px 16px;
+  border-radius: 24px;
+  font-weight: 700;
+  animation: popIn 0.3s ease;
+}
+.player-count {
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+/* ---------- Fragenanzeige ---------- */
+.question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  color: #fff;
+}
+.question-counter { font-weight: 700; }
+.timer-circle {
+  background: #fff;
+  color: #26262b;
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800;
+  font-size: 1.3rem;
+  box-shadow: var(--shadow);
+}
+.timer-circle.low { color: var(--color-red); animation: pulse 0.6s infinite; }
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.question-box {
+  background: #fff;
+  color: #26262b;
+  border-radius: var(--radius);
+  padding: 28px;
+  margin: 0 24px 20px;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  box-shadow: var(--shadow);
+}
+
+.image-placeholder {
+  display: inline-block;
+  background: repeating-linear-gradient(45deg, #f0f0f5, #f0f0f5 10px, #e2e2ef 10px, #e2e2ef 20px);
+  border: 2px dashed #9a9ab0;
+  color: #5b5b70;
+  font-weight: 700;
+  padding: 30px 24px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  font-size: 1rem;
+  letter-spacing: 1px;
+}
+
+/* ---------- Antwort-Kacheln ---------- */
+.answers-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 0 24px 24px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+@media (max-width: 640px) {
+  .answers-grid { grid-template-columns: 1fr; }
+}
+
+.answer-tile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 22px 18px;
+  border-radius: 14px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.1rem;
+  cursor: pointer;
+  box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+  transition: transform 0.1s ease;
+  user-select: none;
+}
+.answer-tile:active { transform: translateY(3px); }
+.answer-tile.shape-triangle { background: var(--color-red); }
+.answer-tile.shape-diamond { background: var(--color-blue); }
+.answer-tile.shape-circle { background: var(--color-yellow); color: #26262b; }
+.answer-tile.shape-square { background: var(--color-green); }
+
+.answer-tile.correct {
+  outline: 4px solid #fff;
+  animation: correctPulse 0.6s ease;
+}
+.answer-tile.wrong { opacity: 0.4; }
+.answer-tile.selected { outline: 4px solid #fff; }
+@keyframes correctPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.answer-shape {
+  width: 26px; height: 26px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem;
+}
+
+/* ---------- Rangliste ---------- */
+.leaderboard-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 auto;
+  max-width: 600px;
+  text-align: left;
+}
+.leaderboard-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  background: #fff;
+  color: #26262b;
+  border-radius: 12px;
+  padding: 14px 20px;
+  margin-bottom: 10px;
+  font-weight: 700;
+  box-shadow: var(--shadow);
+  animation: slideIn 0.3s ease;
+}
+.leaderboard-item .left-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.leaderboard-item .name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.leaderboard-item .score-text {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding-left: 16px;
+}
+.streak-badge {
+  background: #fff3d6;
+  color: #b45f00;
+  font-size: 0.8rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.leaderboard-item .rank { color: var(--color-blue); margin-right: 12px; }
+.leaderboard-item.top-1 { background: var(--color-accent); }
+@keyframes slideIn {
+  from { transform: translateX(-30px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* ---------- Feedback-Anzeige für Spieler ---------- */
+.feedback-screen {
+  font-size: 1.8rem;
+  font-weight: 800;
+  padding: 40px;
+}
+.feedback-correct { color: var(--color-green); }
+.feedback-wrong { color: var(--color-red); }
+
+.score-badge {
+  display: inline-block;
+  margin-top: 16px;
+  background: var(--color-accent);
+  color: #26262b;
+  padding: 10px 22px;
+  border-radius: 20px;
+  font-size: 1.2rem;
+}
+
+/* ---------- Host: Fragen-Editor ---------- */
+.editor-question {
+  border: 2px solid #e2e2ee;
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+.editor-answer-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.editor-answer-row input[type="text"] { margin: 0; flex: 1; }
+.editor-answer-row input[type="radio"] { width: 20px; height: 20px; }
+.editor-actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+
+/* ---------- Hilfsklassen ---------- */
+.hidden { display: none !important; }
+.text-muted { color: var(--color-text-light); }
+.flex-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.mt-16 { margin-top: 16px; }
+.mt-24 { margin-top: 24px; }
+
+footer.app-footer {
+  text-align: center;
+  color: rgba(255,255,255,0.6);
+  padding: 16px;
+  font-size: 0.85rem;
+}
+
+/* Scrollbarer Bereich für lange Listen (Editor, Lobby auf kleinen Screens) */
+.scroll-area {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+/* ---------- Ladeanimation (Spinner) ---------- */
+.spinner {
+  width: 54px; height: 54px;
+  border: 6px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- Fortschrittsbalken (wer hat schon geantwortet) ---------- */
+.progress-bar-track {
+  background: rgba(255,255,255,0.25);
+  border-radius: 20px;
+  height: 14px;
+  width: 100%;
+  max-width: 400px;
+  margin: 10px auto;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  background: var(--color-accent);
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+/* ---------- Fehlermeldungen ---------- */
+.error-text {
+  color: var(--color-red);
+  font-weight: 700;
+  margin: -8px 0 12px;
+  min-height: 1.2em;
+}
+
+/* ---------- Statistik-Kacheln nach Quizende ---------- */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+.stat-tile {
+  background: rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 16px;
+  color: #fff;
+}
+.stat-tile .stat-value { font-size: 1.6rem; font-weight: 800; }
+.stat-tile .stat-label { font-size: 0.8rem; opacity: 0.8; }
