@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Computerarchitektur-Quiz</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <div class="center-screen">
+      <h1 class="title-logo">🖥️ Computerarchitektur-Quiz</h1>
+      <p class="subtitle">Ein Kahoot-ähnliches Echtzeit-Quiz für den Unterricht</p>
+
+      <div class="card">
+        <h2>Wie möchtest du teilnehmen?</h2>
+        <a href="host.html" class="btn btn-primary btn-block">🎓 Ich bin der Host (Lehrkraft)</a>
+        <a href="player.html" class="btn btn-success btn-block">🙋 Ich bin Teilnehmer/in</a>
+      </div>
+    </div>
+    <footer class="app-footer">Läuft lokal über Node.js + Express + Socket.IO</footer>
+  </div>
+
+  <script src="app.js"></script>
+  <script>applyDarkModeFromStorage();</script>
+</body>
+</html>

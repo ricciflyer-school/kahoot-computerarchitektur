@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mitspielen – Computerarchitektur-Quiz</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .avatar-grid { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:12px 0; }
+    .avatar-option { font-size:1.8rem; padding:8px; border-radius:10px; cursor:pointer; background:#f0f0f5; }
+    .avatar-option.selected { background: var(--color-accent); }
+    .powerup-bar { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin:10px 0; }
+    .powerup-btn { font-size:1.6rem; padding:10px 14px; border-radius:12px; background:#fff; color:#26262b; box-shadow:0 4px 0 rgba(0,0,0,0.15); }
+    .powerup-btn:disabled { opacity:0.3; }
+    .reaction-bar { display:flex; gap:14px; justify-content:center; margin-top:10px; }
+    .reaction-btn { font-size:1.8rem; background:none; border:none; box-shadow:none; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+
+    <div class="topbar">
+      <div class="logo">🙋 Quiz-Teilnahme</div>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="btnSound" title="Sound an/aus">🔈</button>
+        <button class="icon-btn" id="btnDark" title="Dunkelmodus">🌙</button>
+      </div>
+    </div>
+
+    <div id="reactionLayer" style="position:fixed; inset:0; pointer-events:none; z-index:999; overflow:hidden;"></div>
+
+    <!-- ===================== SCREEN: BEITRETEN ===================== -->
+    <div id="screen-join" class="center-screen">
+      <div class="card">
+        <h2>Quiz beitreten</h2>
+        <input type="text" id="inputCode" maxlength="6" placeholder="SPIELCODE" style="text-transform:uppercase; text-align:center; font-size:1.4rem; letter-spacing:4px;" />
+        <input type="text" id="inputName" maxlength="18" placeholder="Dein Name" />
+        <p class="text-muted">Wähle dein Avatar:</p>
+        <div class="avatar-grid" id="avatarGrid"></div>
+        <p class="error-text" id="joinError"></p>
+        <button id="btnJoin" class="btn btn-success btn-block">✅ Beitreten</button>
+      </div>
+    </div>
+
+    <!-- ===================== SCREEN: LOBBY (WARTEN) ===================== -->
+    <div id="screen-waiting" class="center-screen hidden">
+      <div class="spinner"></div>
+      <h2 style="color:#fff;"><span id="playerAvatarDisplay"></span> Du bist drin, <span id="playerNameDisplay"></span>! 🎉</h2>
+      <p class="text-muted" style="color:#fff;">Warte, bis der Host das Quiz startet…</p>
+    </div>
+
+    <!-- ===================== SCREEN: FRAGE ===================== -->
+    <div id="screen-question" class="center-screen hidden" style="justify-content:flex-start;">
+      <div class="question-header" style="width:100%;">
+        <span class="question-counter" id="pQuestionCounter">Frage 1/10</span>
+        <div class="timer-circle" id="pTimerCircle">20</div>
+      </div>
+      <div class="question-box" id="pQuestionBox">
+        <div class="image-placeholder" id="pQuestionImage">[BILD]</div>
+        <div id="pQuestionTitle"></div>
+      </div>
+
+      <!-- Risikomodus-Auswahl -->
+      <div class="flex-row" style="margin-bottom:6px;">
+        <button id="btnRiskNormal" class="btn btn-secondary">🛟 Normal</button>
+        <button id="btnRiskMode" class="btn btn-danger">🎲 Risiko (x2 Punkte / x2 Abzug)</button>
+      </div>
+
+      <!-- Powerup-Leiste: einmal pro Quiz nutzbar -->
+      <div class="powerup-bar">
+        <button class="powerup-btn" id="pu-fiftyFifty" title="50/50: zwei falsche Antworten verschwinden">➗ 50/50</button>
+        <button class="powerup-btn" id="pu-extraTime" title="Extra-Zeit: +10 Sekunden für alle">⏱️ +10s</button>
+        <button class="powerup-btn" id="pu-doublePoints" title="Doppelte Punkte für diese Frage">✨ x2</button>
+        <button class="powerup-btn" id="pu-shield" title="Schutz vor Punktabzug (nur im Risikomodus relevant)">🛡️ Schild</button>
+      </div>
+
+      <div class="answers-grid" id="playerAnswersGrid"></div>
+
+      <!-- Live-Reaktionen senden -->
+      <div class="reaction-bar">
+        <button class="reaction-btn" data-emoji="👍">👍</button>
+        <button class="reaction-btn" data-emoji="😂">😂</button>
+        <button class="reaction-btn" data-emoji="😮">😮</button>
+        <button class="reaction-btn" data-emoji="❤️">❤️</button>
+        <button class="reaction-btn" data-emoji="🔥">🔥</button>
+      </div>
+    </div>
+
+    <!-- ===================== SCREEN: ANTWORT GESENDET (Warten) ===================== -->
+    <div id="screen-waitingResult" class="center-screen hidden">
+      <div class="spinner"></div>
+      <h2 style="color:#fff;">Antwort gesendet ✔️</h2>
+      <p class="text-muted" style="color:#fff;">Ergebnis erscheint, wenn alle geantwortet haben…</p>
+    </div>
+
+    <!-- ===================== SCREEN: ERGEBNIS ===================== -->
+    <div id="screen-result" class="center-screen hidden">
+      <div class="card" id="resultCard">
+        <div class="feedback-screen" id="feedbackText"></div>
+        <div class="score-badge" id="scoreBadge"></div>
+        <div id="missionMessages" class="mt-16"></div>
+      </div>
+    </div>
+
+    <!-- ===================== SCREEN: ZWISCHENRANGLISTE ===================== -->
+    <div id="screen-leaderboard" class="center-screen hidden">
+      <h2 style="color:#fff;">📊 Zwischenstand</h2>
+      <ol class="leaderboard-list" id="pLeaderboardList"></ol>
+      <p class="text-muted" style="color:#fff;">Nächste Frage folgt gleich…</p>
+    </div>
+
+    <!-- ===================== SCREEN: ENDPLATZIERUNG ===================== -->
+    <div id="screen-final" class="center-screen hidden">
+      <h2 style="color:#fff;">🏁 Quiz beendet!</h2>
+      <div class="card" id="finalRankCard"></div>
+      <ol class="leaderboard-list mt-24" id="pFinalLeaderboardList"></ol>
+    </div>
+
+    <div id="screen-error" class="center-screen hidden">
+      <div class="card">
+        <h2>⚠️ Verbindung unterbrochen</h2>
+        <p id="errorMessage">Der Host hat die Verbindung verloren.</p>
+        <button class="btn btn-secondary btn-block" onclick="location.reload()">Neu laden</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+  <script>
+    applyDarkModeFromStorage();
+    const socket = io();
+
+    const screens = {
+      join: document.getElementById("screen-join"),
+      waiting: document.getElementById("screen-waiting"),
+      question: document.getElementById("screen-question"),
+      waitingResult: document.getElementById("screen-waitingResult"),
+      result: document.getElementById("screen-result"),
+      leaderboard: document.getElementById("screen-leaderboard"),
+      final: document.getElementById("screen-final"),
+      error: document.getElementById("screen-error")
+    };
+    function showScreen(name) {
+      Object.values(screens).forEach((el) => el.classList.add("hidden"));
+      screens[name].classList.remove("hidden");
+    }
+
+    const btnSound = document.getElementById("btnSound");
+    function refreshSoundIcon() { btnSound.textContent = isSoundEnabled() ? "🔊" : "🔈"; }
+    refreshSoundIcon();
+    btnSound.onclick = () => { setSoundEnabled(!isSoundEnabled()); refreshSoundIcon(); };
+    document.getElementById("btnDark").onclick = toggleDarkMode;
+
+    // ---------- Avatar-Auswahl ----------
+    let selectedAvatar = AVATAR_OPTIONS[0];
+    const avatarGrid = document.getElementById("avatarGrid");
+    AVATAR_OPTIONS.forEach((emoji, i) => {
+      const div = document.createElement("div");
+      div.className = "avatar-option" + (i === 0 ? " selected" : "");
+      div.textContent = emoji;
+      div.onclick = () => {
+        selectedAvatar = emoji;
+        document.querySelectorAll(".avatar-option").forEach((el) => el.classList.remove("selected"));
+        div.classList.add("selected");
+      };
+      avatarGrid.appendChild(div);
+    });
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("code")) document.getElementById("inputCode").value = urlParams.get("code").toUpperCase();
+
+    let myAnswerLocked = false;
+    let currentTimerInterval = null;
+    let powerupsUsed = { fiftyFifty: false, extraTime: false, doublePoints: false, shield: false };
+    let riskModeActive = false;
+
+    document.getElementById("btnJoin").onclick = doJoin;
+    document.getElementById("inputName").addEventListener("keydown", (e) => { if (e.key === "Enter") doJoin(); });
+
+    function doJoin() {
+      const code = document.getElementById("inputCode").value.trim().toUpperCase();
+      const name = document.getElementById("inputName").value.trim();
+      const errorEl = document.getElementById("joinError");
+      errorEl.textContent = "";
+
+      if (!code || code.length !== 6) { errorEl.textContent = "Bitte gib den 6-stelligen Spielcode ein."; return; }
+      if (!name || name.length < 2) { errorEl.textContent = "Bitte gib einen Namen mit mind. 2 Zeichen ein."; return; }
+
+      socket.emit("player:joinGame", { code, name, avatar: selectedAvatar }, (res) => {
+        if (!res.success) { errorEl.textContent = res.error; return; }
+        document.getElementById("playerNameDisplay").textContent = res.name;
+        document.getElementById("playerAvatarDisplay").textContent = selectedAvatar;
+        showScreen("waiting");
+        playSound("join");
+      });
+    }
+
+    socket.on("game:starting", () => {});
+
+    const SHAPES = ["shape-triangle", "shape-diamond", "shape-circle", "shape-square"];
+    const SYMBOLS = ["▲", "◆", "●", "■"];
+
+    socket.on("game:newQuestion", ({ index, total, question }) => {
+      myAnswerLocked = false;
+      riskModeActive = false;
+      clearInterval(currentTimerInterval);
+      showScreen("question");
+      playSound("tick");
+
+      document.getElementById("pQuestionCounter").textContent = `Frage ${index + 1} / ${total}`;
+      renderQuestionImage(document.getElementById("pQuestionImage"), question.image);
+      document.getElementById("pQuestionTitle").innerHTML = `<strong>${escapeHtml(question.title)}</strong><br><span style="font-size:0.9rem;font-weight:400;">${escapeHtml(question.description)}</span>`;
+
+      const grid = document.getElementById("playerAnswersGrid");
+      grid.innerHTML = "";
+      question.answers.forEach((answerText, i) => {
+        const tile = document.createElement("div");
+        tile.className = `answer-tile ${SHAPES[i]}`;
+        tile.dataset.index = i;
+        tile.innerHTML = `<span class="answer-shape">${SYMBOLS[i]}</span><span>${escapeHtml(answerText)}</span>`;
+        tile.onclick = () => submitAnswer(i);
+        grid.appendChild(tile);
+      });
+
+      // Risikomodus-Button zurücksetzen
+      document.getElementById("btnRiskNormal").classList.add("btn-secondary");
+      document.getElementById("btnRiskMode").style.outline = "none";
+
+      // Powerup-Buttons je nach bereits verwendet aktivieren/deaktivieren
+      Object.keys(powerupsUsed).forEach((type) => {
+        const btn = document.getElementById("pu-" + type);
+        if (btn) btn.disabled = powerupsUsed[type];
+      });
+
+      let remaining = question.timeLimit;
+      const timerCircle = document.getElementById("pTimerCircle");
+      timerCircle.textContent = remaining;
+      timerCircle.classList.remove("low");
+      currentTimerInterval = setInterval(() => {
+        remaining--;
+        timerCircle.textContent = Math.max(remaining, 0);
+        if (remaining <= 5) timerCircle.classList.add("low");
+        if (remaining <= 0) clearInterval(currentTimerInterval);
+      }, 1000);
+    });
+
+    // ---------- Risikomodus wählen ----------
+    document.getElementById("btnRiskNormal").onclick = () => {
+      riskModeActive = false;
+      socket.emit("player:setRiskMode", { enabled: false });
+      document.getElementById("btnRiskMode").style.outline = "none";
+      document.getElementById("btnRiskNormal").style.outline = "3px solid #fff";
+    };
+    document.getElementById("btnRiskMode").onclick = () => {
+      riskModeActive = true;
+      socket.emit("player:setRiskMode", { enabled: true });
+      document.getElementById("btnRiskNormal").style.outline = "none";
+      document.getElementById("btnRiskMode").style.outline = "3px solid #fff";
+    };
+
+    // ---------- Powerups nutzen ----------
+    ["fiftyFifty", "extraTime", "doublePoints", "shield"].forEach((type) => {
+      document.getElementById("pu-" + type).onclick = () => {
+        if (powerupsUsed[type] || myAnswerLocked) return;
+        socket.emit("player:usePowerup", { type });
+      };
+    });
+
+    socket.on("player:powerupResult", ({ type, hideIndices }) => {
+      powerupsUsed[type] = true;
+      document.getElementById("pu-" + type).disabled = true;
+      if (type === "fiftyFifty" && hideIndices) {
+        hideIndices.forEach((i) => {
+          const tile = document.querySelector(`#playerAnswersGrid .answer-tile[data-index="${i}"]`);
+          if (tile) { tile.style.visibility = "hidden"; }
+        });
+      }
+    });
+
+    socket.on("game:extraTime", ({ seconds }) => {
+      const timerCircle = document.getElementById("pTimerCircle");
+      timerCircle.textContent = (parseInt(timerCircle.textContent, 10) || 0) + seconds;
+    });
+
+    function submitAnswer(index) {
+      if (myAnswerLocked) return;
+      myAnswerLocked = true;
+      document.querySelectorAll("#playerAnswersGrid .answer-tile").forEach((tile, i) => {
+        tile.classList.toggle("selected", i === index);
+      });
+      socket.emit("player:submitAnswer", { answerIndex: index });
+      setTimeout(() => showScreen("waitingResult"), 400);
+    }
+
+    // ---------- Live-Reaktionen senden ----------
+    document.querySelectorAll(".reaction-btn").forEach((btn) => {
+      btn.onclick = () => socket.emit("player:sendReaction", { emoji: btn.dataset.emoji });
+    });
+    socket.on("game:reaction", ({ avatar, emoji }) => {
+      const layer = document.getElementById("reactionLayer");
+      const el = document.createElement("div");
+      el.textContent = emoji;
+      el.style.position = "absolute";
+      el.style.left = Math.random() * 90 + "%";
+      el.style.bottom = "0";
+      el.style.fontSize = "2.2rem";
+      el.style.transition = "transform 2.2s ease-out, opacity 2.2s ease-out";
+      layer.appendChild(el);
+      requestAnimationFrame(() => {
+        el.style.transform = "translateY(-65vh)";
+        el.style.opacity = "0";
+      });
+      setTimeout(() => el.remove(), 2300);
+    });
+
+    // ---------- Ergebnis kommt erst, wenn ALLE geantwortet haben (siehe Server) ----------
+    socket.on("player:answerResult", ({ correct, pointsEarned, totalScore, streak, missionMessages }) => {
+      showScreen("result");
+      const feedbackEl = document.getElementById("feedbackText");
+      if (correct) {
+        feedbackEl.textContent = "✅ Richtig!" + (streak >= 2 ? ` 🔥 Streak x${streak}` : "");
+        feedbackEl.className = "feedback-screen feedback-correct";
+        playSound("correct");
+      } else {
+        feedbackEl.textContent = pointsEarned < 0 ? "❌ Falsch (Risiko!)" : "❌ Leider falsch";
+        feedbackEl.className = "feedback-screen feedback-wrong";
+        playSound("wrong");
+      }
+      document.getElementById("scoreBadge").textContent = `${pointsEarned >= 0 ? "+" : ""}${pointsEarned} Punkte (Gesamt: ${totalScore})`;
+      const missionsEl = document.getElementById("missionMessages");
+      missionsEl.innerHTML = (missionMessages || []).map((m) => `<p style="font-weight:700;">${escapeHtml(m)}</p>`).join("");
+    });
+
+    socket.on("game:leaderboard", ({ leaderboard }) => {
+      showScreen("leaderboard");
+      const list = document.getElementById("pLeaderboardList");
+      list.innerHTML = "";
+      leaderboard.slice(0, 10).forEach((p, i) => {
+        const li = document.createElement("li");
+        li.className = "leaderboard-item" + (i === 0 ? " top-1" : "");
+        li.innerHTML = `<span><span class="rank">${i + 1}.</span>${p.avatar || ""} ${escapeHtml(p.name)}</span><span>${p.score} P.</span>`;
+        list.appendChild(li);
+      });
+    });
+
+    socket.on("game:finished", ({ leaderboard }) => {
+      showScreen("final");
+      const myId = socket.id;
+      const myRank = leaderboard.findIndex((p) => p.socketId === myId) + 1;
+      const me = leaderboard.find((p) => p.socketId === myId);
+      document.getElementById("finalRankCard").innerHTML = me
+        ? `<h2>Dein Ergebnis</h2><p style="font-size:2rem;font-weight:800;">${formatRank(myRank)} Platz</p><p>${me.score} Punkte gesamt</p>`
+        : `<p>Keine Wertung verfügbar.</p>`;
+      const list = document.getElementById("pFinalLeaderboardList");
+      list.innerHTML = "";
+      leaderboard.slice(0, 10).forEach((p, i) => {
+        const li = document.createElement("li");
+        li.className = "leaderboard-item" + (i === 0 ? " top-1" : "");
+        li.innerHTML = `<span><span class="rank">${i + 1}.</span>${p.avatar || ""} ${escapeHtml(p.name)}</span><span>${p.score} P.</span>`;
+        list.appendChild(li);
+      });
+    });
+
+    socket.on("game:hostDisconnected", () => {
+      document.getElementById("errorMessage").textContent = "Der Host hat die Verbindung verloren. Bitte warte oder lade die Seite neu.";
+      showScreen("error");
+    });
+    socket.on("connect_error", () => console.warn("Verbindungsfehler – erneuter Versuch läuft automatisch."));
+  </script>
+</body>
+</html>

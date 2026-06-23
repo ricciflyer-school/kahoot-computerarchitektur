@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Host – Computerarchitektur-Quiz</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+
+    <div class="topbar">
+      <div class="logo">🖥️ Quiz-Host</div>
+      <div class="topbar-actions">
+        <select id="musicSelect" class="btn btn-secondary" style="padding:8px;"></select>
+        <input type="range" id="musicVolume" min="0" max="100" value="40" title="Lautstärke Hintergrundmusik" />
+        <button class="icon-btn" id="btnMusic" title="Hintergrundmusik an/aus">🎵</button>
+        <button class="icon-btn" id="btnSound" title="Soundeffekte an/aus">🔈</button>
+        <button class="icon-btn" id="btnDark" title="Dunkelmodus">🌙</button>
+        <button class="icon-btn" id="btnFullscreen" title="Vollbild">⛶</button>
+      </div>
+    </div>
+
+    <!-- Hintergrundmusik: Dateien selbst unter /client/sounds/ ablegen (mp3/ogg/wav).
+         Der Server listet sie automatisch im Dropdown oben auf. -->
+    <audio id="bgMusic" loop></audio>
+
+    <!-- Container für Live-Reaktionen, die kurz über dem gesamten Bildschirm aufsteigen -->
+    <div id="reactionLayer" style="position:fixed; inset:0; pointer-events:none; z-index:999; overflow:hidden;"></div>
+
+    <!-- ===================== SCREEN: START ===================== -->
+    <div id="screen-start" class="center-screen">
+      <div class="card">
+        <h2>Neues Quiz starten</h2>
+        <p class="text-muted">Erstellt einen Spielraum mit zufälligem 6-stelligen Code.</p>
+        <button id="btnCreateGame" class="btn btn-primary btn-block">▶️ Spiel erstellen</button>
+        <button id="btnOpenEditor" class="btn btn-secondary btn-block">✏️ Fragen bearbeiten</button>
+      </div>
+    </div>
+
+    <!-- ===================== SCREEN: FRAGEN-EDITOR ===================== -->
+    <div id="screen-editor" class="center-screen hidden">
+      <div class="card card-wide">
+        <h2>Fragen bearbeiten</h2>
+        <p class="text-muted">Bild entweder als Dateiname (z.B. cpu.png, Datei vorher in /client/images/ legen oder direkt hier hochladen) oder als Platzhalter wie [BILD_CPU] eintragen.</p>
+        <div id="editorList" class="scroll-area"></div>
+        <div class="editor-actions">
+          <button id="btnAddQuestion" class="btn btn-secondary">+ Neue Frage</button>
+          <button id="btnSaveQuestions" class="btn btn-success">💾 Speichern</button>
+          <button id="btnBackFromEditor" class="btn btn-secondary">← Zurück</button>
+        </div>
+        <p id="editorError" class="error-text"></p>
+      </div>
+    </div>
+
+    <!-- ===================== SCREEN: LOBBY ===================== -->
+    <div id="screen-lobby" class="center-screen hidden">
+      <h2 style="color:#fff;">Beitreten mit Code:</h2>
+      <div class="game-code-box" id="gameCodeDisplay">------</div>
+      <div class="qr-wrapper">
+        <div id="qrContainer"></div>
+      </div>
+      <p class="text-muted" id="qrHint" style="color:#fff; max-width:480px;"></p>
+      <p class="player-count" id="playerCount">0 / 28 Teilnehmer</p>
+      <div class="player-grid" id="playerGrid"></div>
+      <div class="flex-row mt-24">
+        <button id="btnStartGame" class="btn btn-success" disabled>🚀 Quiz starten</button>
+      </div>
+    </div>
+
+    <!-- ===================== SCREEN: STARTING ===================== -->
+    <div id="screen-starting" class="center-screen hidden">
+      <div class="spinner"></div>
+      <h2 style="color:#fff;">Quiz startet gleich…</h2>
+    </div>
+
+    <!-- ===================== SCREEN: FRAGE AKTIV ===================== -->
+    <div id="screen-question" class="center-screen hidden" style="justify-content:flex-start;">
+      <div class="question-header" style="width:100%;">
+        <span class="question-counter" id="questionCounter">Frage 1 / 10</span>
+        <div class="timer-circle" id="timerCircle">20</div>
+      </div>
+      <div class="question-box" id="questionBox">
+        <div class="image-placeholder" id="questionImage">[BILD]</div>
+        <div id="questionTitle"></div>
+        <p class="text-muted" id="questionDescription" style="font-size:1rem;"></p>
+      </div>
+      <div class="answers-grid" id="hostAnswersGrid">
+        <div class="answer-tile shape-triangle"><span class="answer-shape">▲</span><span class="answer-text"></span></div>
+        <div class="answer-tile shape-diamond"><span class="answer-shape">◆</span><span class="answer-text"></span></div>
+        <div class="answer-tile shape-circle"><span class="answer-shape">●</span><span class="answer-text"></span></div>
+        <div class="answer-tile shape-square"><span class="answer-shape">■</span><span class="answer-text"></span></div>
+      </div>
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" id="answerProgressFill" style="width:0%;"></div>
+      </div>
+      <p class="text-muted" id="answerProgressText" style="color:#fff;">0 / 0 haben geantwortet</p>
+    </div>
+
+    <!-- ===================== SCREEN: ZWISCHENRANGLISTE ===================== -->
+    <div id="screen-leaderboard" class="center-screen hidden">
+      <h2 style="color:#fff;">📊 Zwischenstand</h2>
+      <ol class="leaderboard-list" id="leaderboardList"></ol>
+      <button id="btnNextQuestion" class="btn btn-primary mt-24">➡️ Nächste Frage</button>
+    </div>
+
+    <!-- ===================== SCREEN: ENDERGEBNIS ===================== -->
+    <div id="screen-final" class="center-screen hidden">
+      <h2 style="color:#fff;">🏆 Endrangliste</h2>
+      <ol class="leaderboard-list" id="finalLeaderboardList"></ol>
+      <div class="stats-grid" id="statsGrid"></div>
+      <div class="flex-row mt-24">
+        <button id="btnExportCSV" class="btn btn-warning">⬇️ Als CSV exportieren</button>
+        <button id="btnNewGame" class="btn btn-secondary">🔄 Neues Spiel</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+  <script src="qrcode.js"></script>
+  <script>
+    applyDarkModeFromStorage();
+    const socket = io();
+
+    const screens = {
+      start: document.getElementById("screen-start"),
+      editor: document.getElementById("screen-editor"),
+      lobby: document.getElementById("screen-lobby"),
+      starting: document.getElementById("screen-starting"),
+      question: document.getElementById("screen-question"),
+      leaderboard: document.getElementById("screen-leaderboard"),
+      final: document.getElementById("screen-final")
+    };
+    function showScreen(name) {
+      Object.values(screens).forEach((el) => el.classList.add("hidden"));
+      screens[name].classList.remove("hidden");
+    }
+
+    let currentGameCode = null;
+    let currentQuestionTimer = null;
+
+    // ---------- Sound / Dunkelmodus / Vollbild ----------
+    const btnSound = document.getElementById("btnSound");
+    function refreshSoundIcon() { btnSound.textContent = isSoundEnabled() ? "🔊" : "🔈"; }
+    refreshSoundIcon();
+    btnSound.onclick = () => { setSoundEnabled(!isSoundEnabled()); refreshSoundIcon(); };
+    document.getElementById("btnDark").onclick = toggleDarkMode;
+    document.getElementById("btnFullscreen").onclick = toggleFullscreen;
+
+    // ---------- Hintergrundmusik: Playlist laden + Lautstärke ----------
+    const bgMusic = document.getElementById("bgMusic");
+    const musicSelect = document.getElementById("musicSelect");
+    const musicVolume = document.getElementById("musicVolume");
+    const btnMusic = document.getElementById("btnMusic");
+    let musicPlaying = false;
+
+    fetch("/api/sounds").then((r) => r.json()).then((files) => {
+      if (files.length === 0) {
+        musicSelect.innerHTML = `<option value="">Keine Musik in /client/sounds/ gefunden</option>`;
+        return;
+      }
+      musicSelect.innerHTML = files.map((f) => `<option value="sounds/${f}">${f}</option>`).join("");
+      bgMusic.src = musicSelect.value;
+    });
+    musicSelect.onchange = () => {
+      const wasPlaying = musicPlaying;
+      bgMusic.src = musicSelect.value;
+      if (wasPlaying) bgMusic.play();
+    };
+    musicVolume.oninput = () => { bgMusic.volume = musicVolume.value / 100; };
+    bgMusic.volume = musicVolume.value / 100;
+
+    btnMusic.onclick = () => {
+      if (!musicSelect.value) return;
+      if (musicPlaying) {
+        bgMusic.pause();
+        btnMusic.textContent = "🎵";
+      } else {
+        bgMusic.play().catch((e) => console.warn("Musik konnte nicht gestartet werden:", e));
+        btnMusic.textContent = "🔇";
+      }
+      musicPlaying = !musicPlaying;
+    };
+
+    // ---------- Spiel erstellen ----------
+    document.getElementById("btnCreateGame").onclick = () => {
+      socket.emit("host:createGame", {}, (res) => {
+        if (!res.success) return alert("Spiel konnte nicht erstellt werden.");
+        currentGameCode = res.code;
+        document.getElementById("gameCodeDisplay").textContent = res.code;
+
+        // Echten, scanbaren QR-Code erzeugen (Bibliothek qrcode.js, siehe Installationshinweis im Chat)
+        const qrContainer = document.getElementById("qrContainer");
+        qrContainer.innerHTML = "";
+        const joinUrl = `${location.origin}/player.html?code=${res.code}`;
+        if (window.QRCode) {
+          new QRCode(qrContainer, { text: joinUrl, width: 160, height: 160 });
+          document.getElementById("qrHint").textContent = "QR-Code scannen oder Code manuell eingeben";
+        } else {
+          qrContainer.textContent = "QR-Bibliothek fehlt (siehe Installationshinweis)";
+        }
+
+        showScreen("lobby");
+        playSound("start");
+      });
+    };
+
+    socket.on("host:playerJoined", ({ players }) => {
+      playSound("join");
+      renderPlayerGrid(players);
+    });
+
+    function renderPlayerGrid(players) {
+      const grid = document.getElementById("playerGrid");
+      grid.innerHTML = "";
+      players.forEach((p) => {
+        const chip = document.createElement("div");
+        chip.className = "player-chip";
+        chip.textContent = `${p.avatar || "🙂"} ${p.name}`;
+        grid.appendChild(chip);
+      });
+      document.getElementById("playerCount").textContent = `${players.length} / 28 Teilnehmer`;
+      document.getElementById("btnStartGame").disabled = players.length === 0;
+    }
+
+    document.getElementById("btnStartGame").onclick = () => {
+      socket.emit("host:startGame", {}, (res) => { if (!res.success) alert(res.error); });
+    };
+    socket.on("game:starting", () => showScreen("starting"));
+
+    socket.on("game:newQuestion", ({ index, total, question }) => {
+      clearInterval(currentQuestionTimer);
+      showScreen("question");
+      playSound("tick");
+
+      document.getElementById("questionCounter").textContent = `Frage ${index + 1} / ${total}`;
+      renderQuestionImage(document.getElementById("questionImage"), question.image);
+      document.getElementById("questionTitle").innerHTML = `<strong>${escapeHtml(question.title)}</strong>`;
+      document.getElementById("questionDescription").textContent = question.description;
+
+      const tiles = document.querySelectorAll("#hostAnswersGrid .answer-tile");
+      tiles.forEach((tile, i) => {
+        tile.classList.remove("correct", "wrong");
+        tile.querySelector(".answer-text").textContent = question.answers[i];
+      });
+
+      document.getElementById("answerProgressFill").style.width = "0%";
+      document.getElementById("answerProgressText").textContent = `0 / 0 haben geantwortet`;
+
+      let remaining = question.timeLimit;
+      const timerCircle = document.getElementById("timerCircle");
+      timerCircle.textContent = remaining;
+      timerCircle.classList.remove("low");
+      currentQuestionTimer = setInterval(() => {
+        remaining--;
+        timerCircle.textContent = Math.max(remaining, 0);
+        if (remaining <= 5) timerCircle.classList.add("low");
+        if (remaining <= 0) clearInterval(currentQuestionTimer);
+      }, 1000);
+    });
+
+    // ---------- Powerup "Extra-Zeit" verlängert die Anzeige für alle ----------
+    socket.on("game:extraTime", ({ by, seconds }) => {
+      const timerCircle = document.getElementById("timerCircle");
+      timerCircle.textContent = (parseInt(timerCircle.textContent, 10) || 0) + seconds;
+      showFloatingNote(`⏱️ ${escapeHtml(by)} hat +${seconds} Sekunden Extra-Zeit aktiviert!`);
+    });
+
+    socket.on("host:answerProgress", ({ answeredCount, totalPlayers }) => {
+      const pct = totalPlayers === 0 ? 0 : (answeredCount / totalPlayers) * 100;
+      document.getElementById("answerProgressFill").style.width = pct + "%";
+      document.getElementById("answerProgressText").textContent = `${answeredCount} / ${totalPlayers} haben geantwortet`;
+    });
+
+    // Lösung wird erst aufgedeckt, NACHDEM alle ihr individuelles Ergebnis erhalten haben (siehe Server)
+    socket.on("game:revealAnswer", ({ correctIndex }) => {
+      clearInterval(currentQuestionTimer);
+      const tiles = document.querySelectorAll("#hostAnswersGrid .answer-tile");
+      tiles.forEach((tile, i) => tile.classList.add(i === correctIndex ? "correct" : "wrong"));
+    });
+
+    socket.on("game:leaderboard", ({ leaderboard, isFinal }) => {
+      showScreen("leaderboard");
+      renderLeaderboard(document.getElementById("leaderboardList"), leaderboard);
+      document.getElementById("btnNextQuestion").textContent = isFinal ? "🏁 Endergebnis anzeigen" : "➡️ Nächste Frage";
+    });
+
+    function renderLeaderboard(container, leaderboard) {
+      container.innerHTML = "";
+      leaderboard.slice(0, 28).forEach((p, i) => {
+        const li = document.createElement("li");
+        li.className = "leaderboard-item" + (i === 0 ? " top-1" : "");
+        const streakBadge = p.streak >= 2 ? ` 🔥${p.streak}` : "";
+        li.innerHTML = `<span><span class="rank">${i + 1}.</span>${p.avatar || ""} ${escapeHtml(p.name)}${streakBadge}</span><span>${p.score} P.</span>`;
+        container.appendChild(li);
+      });
+    }
+
+    document.getElementById("btnNextQuestion").onclick = () => socket.emit("host:nextQuestion");
+
+    socket.on("game:finished", ({ leaderboard }) => {
+      showScreen("final");
+      renderLeaderboard(document.getElementById("finalLeaderboardList"), leaderboard);
+      const totalPlayers = leaderboard.length;
+      const avgScore = totalPlayers ? Math.round(leaderboard.reduce((s, p) => s + p.score, 0) / totalPlayers) : 0;
+      document.getElementById("statsGrid").innerHTML = `
+        <div class="stat-tile"><div class="stat-value">${totalPlayers}</div><div class="stat-label">Teilnehmer</div></div>
+        <div class="stat-tile"><div class="stat-value">${avgScore}</div><div class="stat-label">Ø Punkte</div></div>
+        <div class="stat-tile"><div class="stat-value">${leaderboard[0] ? escapeHtml(leaderboard[0].name) : "-"}</div><div class="stat-label">🥇 Sieger/in</div></div>
+      `;
+    });
+
+    document.getElementById("btnExportCSV").onclick = () => {
+      socket.emit("host:exportResults", {}, (res) => { if (res.success) downloadLeaderboardAsCSV(res.leaderboard); });
+    };
+    document.getElementById("btnNewGame").onclick = () => location.reload();
+    socket.on("game:hostDisconnected", () => {});
+
+    // ---------- Live-Reaktionen anzeigen ----------
+    socket.on("game:reaction", ({ name, avatar, emoji }) => {
+      const layer = document.getElementById("reactionLayer");
+      const el = document.createElement("div");
+      el.textContent = emoji;
+      el.style.position = "absolute";
+      el.style.left = Math.random() * 90 + "%";
+      el.style.bottom = "0";
+      el.style.fontSize = "2.4rem";
+      el.style.animation = "floatUp 2.5s ease-out forwards";
+      layer.appendChild(el);
+      setTimeout(() => el.remove(), 2500);
+    });
+    // Kleine Keyframe-Animation für aufsteigende Reaktionen zur Laufzeit einfügen
+    const styleTag = document.createElement("style");
+    styleTag.textContent = `@keyframes floatUp { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-70vh); opacity: 0; } }`;
+    document.head.appendChild(styleTag);
+
+    function showFloatingNote(text) {
+      const layer = document.getElementById("reactionLayer");
+      const el = document.createElement("div");
+      el.textContent = text;
+      el.style.position = "absolute";
+      el.style.top = "10%";
+      el.style.left = "50%";
+      el.style.transform = "translateX(-50%)";
+      el.style.background = "rgba(0,0,0,0.7)";
+      el.style.color = "#fff";
+      el.style.padding = "10px 18px";
+      el.style.borderRadius = "10px";
+      el.style.fontWeight = "700";
+      layer.appendChild(el);
+      setTimeout(() => el.remove(), 3000);
+    }
+
+    /* ============================================================
+     * Fragen-Editor (mit Bild-Upload)
+     * ============================================================ */
+    let editorQuestions = [];
+    let availableImages = [];
+
+    document.getElementById("btnOpenEditor").onclick = () => {
+      socket.emit("host:getQuestions", {}, (questions) => {
+        editorQuestions = JSON.parse(JSON.stringify(questions));
+        fetch("/api/images").then((r) => r.json()).then((imgs) => { availableImages = imgs; renderEditor(); });
+        showScreen("editor");
+      });
+    };
+    document.getElementById("btnBackFromEditor").onclick = () => showScreen("start");
+
+    function renderEditor() {
+      const list = document.getElementById("editorList");
+      list.innerHTML = "";
+      editorQuestions.forEach((q, qi) => {
+        const div = document.createElement("div");
+        div.className = "editor-question";
+        div.innerHTML = `
+          <input type="text" placeholder="Titel" value="${escapeHtml(q.title)}" data-field="title" data-q="${qi}" />
+          <input type="text" placeholder="Beschreibung / Frage" value="${escapeHtml(q.description)}" data-field="description" data-q="${qi}" />
+
+          <label>Bild:</label>
+          <div class="flex-row" style="justify-content:flex-start; gap:8px; align-items:center;">
+            <select data-field="imageSelect" data-q="${qi}" style="width:auto;">
+              <option value="">-- Platzhalter / eigener Wert --</option>
+              ${availableImages.map((img) => `<option value="images/${img}" ${q.image === "images/" + img ? "selected" : ""}>${img}</option>`).join("")}
+            </select>
+            <input type="text" value="${escapeHtml(q.image)}" data-field="image" data-q="${qi}" placeholder="[BILD_CPU] oder images/cpu.png" style="margin:0; flex:1;" />
+            <input type="file" accept="image/*" data-action="upload" data-q="${qi}" style="width:auto;" />
+          </div>
+          <div class="image-placeholder" data-preview="${qi}" style="max-width:200px; max-height:120px; overflow:hidden;"></div>
+
+          ${q.answers.map((a, ai) => `
+            <div class="editor-answer-row">
+              <input type="radio" name="correct-${qi}" data-q="${qi}" data-ai="${ai}" ${q.correctIndex === ai ? "checked" : ""} />
+              <input type="text" value="${escapeHtml(a)}" data-field="answer" data-q="${qi}" data-ai="${ai}" placeholder="Antwort ${ai + 1}" />
+            </div>
+          `).join("")}
+          <label>Zeitlimit (Sekunden): </label>
+          <input type="number" min="5" max="120" value="${q.timeLimit}" data-field="timeLimit" data-q="${qi}" style="width:100px;display:inline-block;" />
+          <button class="btn btn-danger" data-action="delete" data-q="${qi}" style="margin-top:10px;">🗑️ Frage löschen</button>
+        `;
+        list.appendChild(div);
+        updateImagePreview(qi);
+      });
+
+      list.querySelectorAll("input[data-field], select[data-field]").forEach((input) => {
+        input.addEventListener("input", onEditorInputChange);
+        input.addEventListener("change", onEditorInputChange);
+      });
+      list.querySelectorAll("input[type=radio]").forEach((radio) => {
+        radio.addEventListener("change", (e) => {
+          editorQuestions[+e.target.dataset.q].correctIndex = +e.target.dataset.ai;
+        });
+      });
+      list.querySelectorAll("button[data-action=delete]").forEach((btn) => {
+        btn.addEventListener("click", (e) => { editorQuestions.splice(+e.target.dataset.q, 1); renderEditor(); });
+      });
+      // Datei-Upload-Felder
+      list.querySelectorAll("input[data-action=upload]").forEach((input) => {
+        input.addEventListener("change", (e) => handleImageUpload(e, +e.target.dataset.q));
+      });
+    }
+
+    function updateImagePreview(qi) {
+      const el = document.querySelector(`[data-preview="${qi}"]`);
+      if (el) renderQuestionImage(el, editorQuestions[qi].image);
+    }
+
+    function onEditorInputChange(e) {
+      const { field, q, ai } = e.target.dataset;
+      const qi = +q;
+      if (field === "answer") {
+        editorQuestions[qi].answers[+ai] = e.target.value;
+      } else if (field === "timeLimit") {
+        editorQuestions[qi].timeLimit = parseInt(e.target.value, 10) || 20;
+      } else if (field === "imageSelect") {
+        if (e.target.value) {
+          editorQuestions[qi].image = e.target.value;
+          // zugehöriges Textfeld synchronisieren
+          const textInput = document.querySelector(`input[data-field="image"][data-q="${qi}"]`);
+          if (textInput) textInput.value = e.target.value;
+        }
+        updateImagePreview(qi);
+      } else {
+        editorQuestions[qi][field] = e.target.value;
+        if (field === "image") updateImagePreview(qi);
+      }
+    }
+
+    // Bild-Datei auswählen -> als Base64 an den Server senden -> Pfad ins Frage-Feld übernehmen
+    function handleImageUpload(e, qi) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        fetch("/api/upload-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filename: file.name, dataBase64: reader.result })
+        })
+          .then((r) => r.json())
+          .then((res) => {
+            if (!res.success) return alert(res.error || "Upload fehlgeschlagen.");
+            editorQuestions[qi].image = res.path;
+            availableImages.push(file.name);
+            renderEditor();
+          })
+          .catch(() => alert("Upload fehlgeschlagen."));
+      };
+      reader.readAsDataURL(file);
+    }
+
+    document.getElementById("btnAddQuestion").onclick = () => {
+      editorQuestions.push({
+        id: Date.now(),
+        title: "Neue Frage",
+        description: "Beschreibung der Frage…",
+        image: "[BILD_CPU]",
+        answers: ["Antwort 1", "Antwort 2", "Antwort 3", "Antwort 4"],
+        correctIndex: 0,
+        timeLimit: 20
+      });
+      renderEditor();
+    };
+
+    document.getElementById("btnSaveQuestions").onclick = () => {
+      socket.emit("host:saveQuestions", editorQuestions, (res) => {
+        const errEl = document.getElementById("editorError");
+        if (!res.success) { errEl.textContent = res.error || "Fehler beim Speichern."; }
+        else { errEl.textContent = ""; alert("Fragen erfolgreich gespeichert!"); }
+      });
+    };
+  </script>
+</body>
+</html>
